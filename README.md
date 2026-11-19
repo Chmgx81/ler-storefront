@@ -30,8 +30,8 @@ Most storefront demos stop at a grid of cards. This one carries the parts that d
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/shop.png" alt="Shop page with filters and a product grid"><br><sub><b>Shop</b> — filters, sort and search live in the URL</sub></td>
-    <td width="50%"><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"><br><sub><b>Product</b> — options, care notes and assistant entry points</sub></td>
+    <td width="50%"><img src="docs/shop.png" alt="Shop page with filters and a product grid"><br><sub><b>Shop</b> · filters, sort and search in the URL</sub></td>
+    <td width="50%"><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"><br><sub><b>Product</b> · options, care notes, assistant</sub></td>
   </tr>
 </table>
 
@@ -56,24 +56,24 @@ npm run build && npm start    # production build on :8787
 
 ## What you get
 
-- **Shop** — 16 pieces, four collections, filters, sort, search, quick add.
-- **Bag** — survives a reload, checks out without an account.
-- **Accounts** — sign up, sign in, reset, change password, delete.
-- **Orders** — stored in SQLite or Turso, repriced on the server.
-- **Guest receipts** — readable only with their own random token.
-- **Payments** — Stripe Checkout and signed webhooks, or honest demo mode.
-- **Stock** — reserved, committed, released.
-- **Admin** — `/admin` ledger for allowlisted, verified emails.
-- **Assistant** — proposes pieces from the catalogue, never a made-up price.
-- **Accessible** — axe clean across 25 views, keyboard paths tested.
+- **Shop** · 16 pieces, four collections, filters, sort, search, quick add.
+- **Bag** · survives a reload, checks out without an account.
+- **Accounts** · sign up, sign in, reset, change password, delete.
+- **Orders** · stored in SQLite or Turso, repriced on the server.
+- **Guest receipts** · readable only with their own random token.
+- **Payments** · Stripe Checkout and signed webhooks, or honest demo mode.
+- **Stock** · reserved, committed, released.
+- **Admin** · `/admin` ledger for allowlisted, verified emails.
+- **Assistant** · proposes pieces from the catalogue, never a made-up price.
+- **Accessible** · axe clean across 25 views, keyboard paths tested.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-  B["React app<br/>Vite · Router · Motion"] -->|/api| H["Hono server<br/>one function"]
-  H --> D[("libSQL<br/>Turso or local file")]
-  H --> S["Stripe<br/>checkout + webhooks"]
+  B["React<br/>storefront"] -->|/api| H["Hono<br/>server"]
+  H --> D[("libSQL<br/>Turso or file")]
+  H --> S["Stripe<br/>Checkout"]
   H --> N["NVIDIA NIM<br/>fixed tools"]
 ```
 
