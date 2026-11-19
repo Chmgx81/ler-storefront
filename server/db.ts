@@ -64,6 +64,28 @@ export const db = {
   },
 };
 
+/**
+ * BEGIN IMMEDIATE fails fast on a busy local SQLite file. Retry only the
+ * acquisition, with bounded backoff, so concurrent rate-limit and stock
+ * writes serialise instead of surfacing a 500. Work itself is never retried.
+ */
+async function beginWriteTransaction() {
+  const delays = [5, 10, 20, 40, 80, 160, 320, 640];
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await client.transaction('write');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const busy =
+        (error as { rawCode?: number; code?: string })?.rawCode === 5 ||
+        (error as { code?: string })?.code === 'SQLITE_BUSY' ||
+        message.includes('SQLITE_BUSY');
+      if (!busy || attempt >= delays.length - 1) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
+
 /** Writes that must be atomic use one libSQL transaction. */
 export async function withTransaction<T>(
   work: (tx: {
@@ -72,7 +94,7 @@ export async function withTransaction<T>(
     all: (sql: string, args?: unknown[]) => Promise<Record<string, unknown>[]>;
   }) => Promise<T>,
 ): Promise<T> {
-  const tx = await client.transaction('write');
+  const tx = await beginWriteTransaction();
   try {
     const result = await work({
       execute: (sql, args = []) => tx.execute({ sql, args: values(args) }),

@@ -112,13 +112,15 @@ async function orderNumber(id: string) {
 export function clientIp(c: Context) {
   if (config.trustProxy) {
     const forwarded = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
-    if (forwarded) return forwarded;
+    const real = c.req.header('x-real-ip')?.trim();
+    if (forwarded || real) return forwarded || real || 'unknown';
   }
   try {
     return getConnInfo(c).remote.address ?? 'unknown';
   } catch {
-    // Vercel Functions have no Node IncomingMessage; the platform sets this header.
-    return c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || c.req.header('x-real-ip') || 'unknown';
+    // No Node socket (Vercel Functions). Forwarded headers are only trustworthy
+    // when the operator has explicitly opted in with TRUST_PROXY=true.
+    return 'unknown';
   }
 }
 

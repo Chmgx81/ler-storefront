@@ -1,23 +1,26 @@
 import { randomUUID } from 'node:crypto';
-import { db } from './db';
+import { withTransaction } from './db';
 
 /** DB-backed rolling-window limiter. Works with local SQLite and remote Turso. */
 export async function consumeRateLimit(key: string, windowMs: number, max: number) {
   const now = Date.now();
-  const row = (await db.prepare('SELECT key, count, lastRequest FROM rateLimit WHERE key = ?').get(key)) as
-    | { key: string; count: number; lastRequest: number }
-    | undefined;
+  // The check and the increment must be one serialised write: otherwise
+  // parallel callers all read the same count and every request gets through.
+  return withTransaction(async (tx) => {
+    const row = (await tx.get('SELECT key, count, lastRequest FROM rateLimit WHERE key = ?', [key])) as
+      | { key: string; count: number; lastRequest: number }
+      | undefined;
 
-  if (!row || now - Number(row.lastRequest) >= windowMs) {
-    await db
-      .prepare(
+    if (!row || now - Number(row.lastRequest) >= windowMs) {
+      await tx.execute(
         'INSERT INTO rateLimit (id, key, count, lastRequest) VALUES (?, ?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = 1, lastRequest = excluded.lastRequest',
-      )
-      .run(randomUUID(), key, now);
-    return true;
-  }
-  if (Number(row.count) >= max) return false;
+        [randomUUID(), key, now],
+      );
+      return true;
+    }
+    if (Number(row.count) >= max) return false;
 
-  await db.prepare('UPDATE rateLimit SET count = count + 1, lastRequest = ? WHERE key = ?').run(now, key);
-  return true;
+    await tx.execute('UPDATE rateLimit SET count = count + 1, lastRequest = ? WHERE key = ?', [now, key]);
+    return true;
+  });
 }

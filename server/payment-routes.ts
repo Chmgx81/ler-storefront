@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import type { Hono } from 'hono';
 import { auth } from './auth';
 import { config } from './config';
@@ -5,6 +6,13 @@ import { db, recordEvent } from './db';
 import { findOrderByPublicId, markCancelled, markPaid, markRefunded } from './order-status';
 import { refundPayment, retrieveCheckoutSession, verifyStripeEvent, type StripeEvent } from './payments';
 import { serialize, type OrderRow } from './orders';
+
+function tokenMatches(given: unknown, expected: string | null | undefined) {
+  if (!expected || typeof given !== 'string') return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 async function rememberEvent(event: StripeEvent, orderId: string) {
   await db.prepare('INSERT INTO payment_events (id, type, order_id, created_at) VALUES (?, ?, ?, ?)').run(
@@ -90,7 +98,7 @@ export function registerPaymentRoutes(app: Hono<any>) {
     const row = await findOrderByPublicId(orderId);
     if (!row) return c.json({ error: 'That order could not be found.' }, 404);
 
-    let authorized = Boolean(token && row.access_token === token);
+    let authorized = tokenMatches(token, row.access_token);
     if (!authorized) {
       const session = await auth.api.getSession({ headers: c.req.raw.headers });
       authorized = Boolean(session && row.user_id === session.user.id);

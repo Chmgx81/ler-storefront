@@ -3,7 +3,7 @@ import { fromCents } from '../src/lib/pricing';
 import { config } from './config';
 import { db, recordEvent, withTransaction } from './db';
 import { sendReceipt } from './mail';
-import { commitStock, releaseStock } from './stock';
+import { commitStock, releaseStock, txRunner } from './stock';
 
 type Row = {
   id: string;
@@ -63,11 +63,17 @@ export async function markPaid(publicId: string, paymentIntentId: string) {
 export async function markCancelled(publicId: string) {
   const row = await findOrderByPublicId(publicId);
   if (!row || row.status !== 'awaiting_payment') return false;
-  const updated = await db
-    .prepare("UPDATE orders SET status = 'cancelled' WHERE id = ? AND status = 'awaiting_payment'")
-    .run(row.id);
-  if (!updated.changes) return false;
-  await releaseStock(JSON.parse(row.items) as { slug: string; qty: number }[]);
+  let cancelled = false;
+  await withTransaction(async (tx) => {
+    const updated = await tx.execute(
+      "UPDATE orders SET status = 'cancelled' WHERE id = ? AND status = 'awaiting_payment'",
+      [row.id],
+    );
+    if (!updated.rowsAffected) return;
+    await releaseStock(JSON.parse(row.items) as { slug: string; qty: number }[], txRunner(tx));
+    cancelled = true;
+  });
+  if (!cancelled) return false;
   recordEvent('payment_cancelled', row.number, row.email);
   return true;
 }

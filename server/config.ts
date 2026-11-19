@@ -157,3 +157,9 @@ if (config.isProduction && config.adminEmails.length && !config.requireVerificat
     'ADMIN_EMAILS requires REQUIRE_EMAIL_VERIFICATION=true: admin access must not rest on an unverified email address.',
   );
 }
+if (process.env.VERCEL && !config.trustProxy) {
+  console.warn(
+    '[config] TRUST_PROXY is false on a serverless runtime; IP-based limits share one fallback key. ' +
+      'Set TRUST_PROXY=true when your platform normalises X-Forwarded-For.',
+  );
+}
