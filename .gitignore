@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-server/
+*.tsbuildinfo
+
+# Environment: never commit real values
+.env
+.env.*
+!.env.example
+
+# Local database, mail outbox, backups
+data/
+
+# Hosting metadata
+.vercel/
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs and test output
+*.log
+npm-debug.log*
+coverage/
+playwright-report/
+test-results/
+
+# Round-by-round screenshots (49 MB) and reference captures of third-party
+# sites. Kept locally; the written record lives in cook/*.md.
+cook/stills/
+cook/refs/

@@ -1,0 +1,42 @@
+MIT License
+
+Copyright (c) 2026 LER contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-party assets are not covered by this licence
+
+The MIT licence above applies to the source code in this repository. It does
+**not** grant rights to the following assets, which remain the property of
+their respective owners and are included only so the demo renders:
+
+- **Product and editorial photography** in `public/products/` and
+  `public/editorial/` comes from the Shopify [mock.shop](https://mock.shop)
+  demo catalogue. It depicts stoneware made by other studios and is not ours
+  to license. Replace it with your own photography before any real use.
+- **Reference screenshots** in `cook/refs/` are captures of
+  fellowproducts.com, fermliving.com, italic.com and parachutehome.com, used
+  for design study. They are excluded from version control.
+- **Satoshi** (Indian Type Foundry / Fontshare) and **Instrument Serif**
+  (Instrument / Google Fonts) are distributed under their own font licences.
+  See the notes in `public/fonts/`.
+- Product names, prices, copy and the LER brand are fictional and exist to
+  demonstrate the storefront.
