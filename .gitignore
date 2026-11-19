@@ -2,8 +2,8 @@
 node_modules/
 
 # Build output
-dist/
-dist-server/
+/dist/
+/dist-server/
 *.tsbuildinfo
 
 # Environment: never commit real values
@@ -11,11 +11,11 @@ dist-server/
 .env.*
 !.env.example
 
-# Local database, mail outbox, backups
-data/
+# Local database, mail outbox, backups (root only: src/data/ is source code)
+/data/
 
 # Hosting metadata
-.vercel/
+/.vercel/
 
 # Editor and OS noise
 .DS_Store
