@@ -247,8 +247,8 @@ The app is deployed on **Vercel** with **Turso** for data:
 a proxy you control.
 
 Any Node host works too: `npm run build && npm start` serves `dist/` plus `/api`
-from one process. See the README's predecessor notes in
-[`cook/ROUNDS.md`](cook/ROUNDS.md) for the decisions behind each choice.
+from one process. The reasoning behind each of these choices is recorded in
+[`cook/ROUNDS.md`](cook/ROUNDS.md).
 
 ## Security
 
