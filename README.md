@@ -28,13 +28,6 @@ and an assistant that can search the shop but cannot invent a product.</p>
 
 Most storefront demos stop at a grid of cards. This one carries the parts that decide whether a shop works: guest checkout that does not leak other orders, prices the browser cannot set, webhooks that cannot be replayed, an admin ledger, and a fixed toolset for the assistant. Still one small codebase.
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/shop.png" alt="Shop page with filters and a product grid"><br><sub><b>Shop</b> · filters, sort and search in the URL</sub></td>
-    <td width="50%"><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"><br><sub><b>Product</b> · options, care notes, assistant</sub></td>
-  </tr>
-</table>
-
 ## Quickstart
 
 Needs **Node 22.5 or newer**. No accounts or keys to sign up for.
@@ -132,6 +125,21 @@ Card details never touch the app. A payment that arrives after the stock hold ex
 Same-origin checks, `HttpOnly` and `SameSite=Lax` cookies, CSP, HSTS, a 32 KB body limit, parameterised SQL, database-backed rate limits, and secrets that never reach the browser. The assistant has no browsing tool, so there is no URL for a user to point it at.
 
 Coverage is in [`cook/OWASP.md`](cook/OWASP.md). Report vulnerabilities privately via [`SECURITY.md`](SECURITY.md). Known limits: no tax or live shipping rates, no product editing, full refunds only, one admin tier.
+
+## Screens
+
+<details>
+<summary><b>Shop and product pages</b></summary>
+<br>
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/shop.png" alt="Shop page with filters and a product grid"><br><sub><b>Shop</b> · filters, sort and search in the URL</sub></td>
+    <td width="50%"><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"><br><sub><b>Product</b> · options, care notes, assistant</sub></td>
+  </tr>
+</table>
+
+</details>
 
 ## Licence
 
