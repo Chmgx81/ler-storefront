@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHmac, randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
-import { DatabaseSync } from 'node:sqlite';
+import { createClient } from '@libsql/client';
 
 const PORT = 8801;
 const BASE = `http://localhost:${PORT}`;
@@ -14,6 +14,23 @@ const SECRET = 'whsec_localtestsecret123456';
 let child;
 let orderId;
 let event;
+
+/** Minimal async handle over the same libSQL path the server uses. */
+function openDb() {
+  const client = createClient({ url: `file:${DB}` });
+  return {
+    async get(sql, ...args) {
+      const { rows } = await client.execute({ sql, args });
+      return rows[0];
+    },
+    async run(sql, ...args) {
+      await client.execute({ sql, args });
+    },
+    close() {
+      client.close();
+    },
+  };
+}
 
 function signed(body) {
   const timestamp = Math.floor(Date.now() / 1000);
@@ -66,14 +83,14 @@ before(async () => {
 
   orderId = randomUUID();
   const slug = 'rounded-stoneware-mug';
-  const db = new DatabaseSync(DB);
-  db.prepare(
+  const db = openDb();
+  await db.run(
     `INSERT INTO orders
       (id, public_id, number, user_id, email, name, address, city, country, shipping,
        status, subtotal_cents, shipping_cents, total_cents, items, idempotency_key,
        access_token, payment_intent_id, created_at)
      VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 'awaiting_payment', 5600, 800, 6400, ?, NULL, ?, NULL, ?)`,
-  ).run(
+
     orderId,
     orderId,
     'LER-PAYTEST',
@@ -87,7 +104,7 @@ before(async () => {
     'testaccesstoken',
     Date.now(),
   );
-  db.prepare('UPDATE stock SET reserved = reserved + 2 WHERE slug = ?').run(slug);
+  await db.run('UPDATE stock SET reserved = reserved + 2 WHERE slug = ?', slug);
   db.close();
 
   event = JSON.stringify({
@@ -120,9 +137,9 @@ test('signed webhook captures payment, commits stock and sends a receipt', async
   const response = await post(event, signed(event));
   assert.equal(response.status, 200);
 
-  const db = new DatabaseSync(DB, { readOnly: true });
-  const order = db.prepare('SELECT status, payment_intent_id FROM orders WHERE public_id = ?').get(orderId);
-  const stock = db.prepare('SELECT available, reserved FROM stock WHERE slug = ?').get('rounded-stoneware-mug');
+  const db = openDb();
+  const order = await db.get('SELECT status, payment_intent_id FROM orders WHERE public_id = ?', orderId);
+  const stock = await db.get('SELECT available, reserved FROM stock WHERE slug = ?', 'rounded-stoneware-mug');
   db.close();
   assert.equal(order.status, 'paid');
   assert.equal(order.payment_intent_id, 'pi_localtest123');
@@ -131,12 +148,12 @@ test('signed webhook captures payment, commits stock and sends a receipt', async
 });
 
 test('replaying the same event does not sell stock twice', async () => {
-  const db = new DatabaseSync(DB, { readOnly: true });
-  const before = db.prepare('SELECT available FROM stock WHERE slug = ?').get('rounded-stoneware-mug').available;
+  const db = openDb();
+  const before = (await db.get('SELECT available FROM stock WHERE slug = ?', 'rounded-stoneware-mug')).available;
   db.close();
   assert.equal((await post(event, signed(event))).status, 200);
-  const db2 = new DatabaseSync(DB, { readOnly: true });
-  const after = db2.prepare('SELECT available FROM stock WHERE slug = ?').get('rounded-stoneware-mug').available;
+  const db2 = openDb();
+  const after = (await db2.get('SELECT available FROM stock WHERE slug = ?', 'rounded-stoneware-mug')).available;
   db2.close();
   assert.equal(after, before);
 });
@@ -148,8 +165,8 @@ test('refund event marks a paid order refunded', async () => {
     data: { object: { payment_intent: 'pi_localtest123' } },
   });
   assert.equal((await post(refund, signed(refund))).status, 200);
-  const db = new DatabaseSync(DB, { readOnly: true });
-  const order = db.prepare('SELECT status FROM orders WHERE public_id = ?').get(orderId);
+  const db = openDb();
+  const order = await db.get('SELECT status FROM orders WHERE public_id = ?', orderId);
   db.close();
   assert.equal(order.status, 'refunded');
 });
