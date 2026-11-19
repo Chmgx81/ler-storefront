@@ -1,288 +1,195 @@
-# LER
+<div align="center">
 
-A small, production-shaped storefront for a fictional Copenhagen stoneware
-studio. Real accounts, real persisted orders, an agentic assistant — and, when
-configured, real card payments through Stripe Checkout. It runs in demo mode by
-default and takes no money.
+<h1>ler.</h1>
 
-The point of the project is the shape, not the pottery: a single small codebase
-that shows what a shop needs beyond a grid of cards — sessions, guest orders,
-server-owned prices and stock, signed webhooks, rate limits, an admin ledger, an
-LLM that cannot invent a product, and an accessible UI that holds up on a phone.
+<p><strong>A production-shaped storefront for a fictional Copenhagen stoneware studio.</strong></p>
 
-**[Live demo](https://ler-gold.vercel.app)** · runs with demo payments and a
-file-based mail outbox.
+<p>Real accounts, persisted orders, signed Stripe webhooks,<br>
+and an assistant that cannot invent a product.</p>
 
-<picture>
-  <source media="(max-width: 700px)" srcset="docs/home-mobile.png">
-  <img src="docs/home.png" alt="The LER storefront: an editorial hero with a stoneware teapot and the headline 'Made by hand, for every day.'">
-</picture>
+<p>
+  <a href="https://ler-gold.vercel.app"><strong>Live demo</strong></a>
+  &nbsp;·&nbsp; <a href="#quickstart">Quickstart</a>
+  &nbsp;·&nbsp; <a href="#architecture">Architecture</a>
+  &nbsp;·&nbsp; <a href="SECURITY.md">Security</a>
+</p>
+
+<p>
+  <a href="https://github.com/Chmgx81/ler-storefront/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Chmgx81/ler-storefront/ci.yml?branch=main&style=flat-square&label=build&labelColor=221F19" alt="Build status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-MIT-4E5439?style=flat-square&labelColor=221F19" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/node-22.5%2B-B98A47?style=flat-square&labelColor=221F19" alt="Node 22.5 or newer">
+</p>
+
+<img src="docs/home.png" width="100%" alt="The LER storefront: a stoneware teapot beside the headline 'Made by hand, for every day.'">
+
+</div>
+
+<br>
+
+The point of this project is the shape, not the pottery. A shop needs more than a grid of cards: sessions that survive a reload, guest checkout that does not leak other people's orders, prices and stock the client cannot set, webhooks that cannot be replayed, an admin ledger, and an LLM with a fixed toolset. That is what is in here, at the size of one small codebase.
 
 <table>
   <tr>
-    <td><img src="docs/shop.png" alt="Shop page with collection filters and a product grid"></td>
-    <td><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"></td>
+    <td width="50%"><img src="docs/shop.png" alt="Shop page with collection filters and a product grid"><br><sub><b>Shop</b> · filters, sort and search in the URL</sub></td>
+    <td width="50%"><img src="docs/product.png" alt="Product page for the Round-Bellied Teapot"><br><sub><b>Product</b> · gallery, options and assistant entry points</sub></td>
   </tr>
 </table>
 
-## Contents
-
-- [Run it](#run-it)
-- [What is actually implemented](#what-is-actually-implemented)
-- [Architecture](#architecture)
-- [Taking real money](#taking-real-money)
-- [Accounts and access](#accounts-and-access)
-- [The assistant](#the-assistant)
-- [Design system](#design-system)
-- [Tests](#tests)
-- [Deploying](#deploying)
-- [Security](#security)
-- [Limitations](#limitations)
-- [Licence](#licence)
-
-## Run it
+## Quickstart
 
 Requires **Node 22.5+**.
 
 ```bash
 npm install
-cp .env.example .env          # then set BETTER_AUTH_SECRET
-openssl rand -base64 48       # paste the output into BETTER_AUTH_SECRET
+cp .env.example .env          # set BETTER_AUTH_SECRET
+openssl rand -base64 48       # paste the output into .env
 npm run db:migrate
 npm run dev                   # API :8787, storefront :5173
 ```
 
-Open <http://localhost:5173>. The API and the Vite dev server run together; Vite
-proxies `/api`.
+Open <http://localhost:5173>. No API keys are needed: the shop runs in demo mode, mail is written to `data/outbox`, and the assistant answers from the local catalogue.
 
 ```bash
-npm test                      # 21 integration tests, throwaway databases
+npm test                      # 21 integration tests
 npm run build && npm start    # production build on :8787
 ```
 
-Nothing else is required. Without a mail provider, verification and reset
-messages are written as JSON files to `data/outbox` — the UI does not pretend an
-email was sent. Without an NVIDIA key the assistant answers from the local
-catalogue.
+## What is here
 
-## What is actually implemented
-
-This is the part worth checking before you reuse anything.
-
-| Area | Behaviour |
+| | |
 |---|---|
-| Catalogue | 16 pieces across Table, Tea & coffee, Serve and Homeware; filters, sort, full-text search |
-| Bag | Local, survives reload; guest checkout without an account |
-| Accounts | Better Auth 1.7: sign-up, sign-in, reset, password change, session revocation, deletion |
-| Orders | Persisted in libSQL; prices, names, shipping and stock recomputed server-side |
-| Guest access | Order reachable only with a separate random token, never by UUID alone |
-| Payments | Stripe hosted Checkout, signed webhooks, refunds; demo mode otherwise |
-| Stock | Reservation on checkout, commit on payment, release on expiry or cancellation |
-| Admin | `/admin` ledger for allowlisted **and verified** emails: status changes, demo refunds |
-| Assistant | NVIDIA NIM tool-calling agent over a fixed catalogue API, with a local fallback |
-| A11y | axe clean across 25 desktop and mobile views; keyboard paths tested |
+| **Catalogue** | 16 pieces across Table, Tea & coffee, Serve and Homeware, with filters, sort and search |
+| **Bag** | Local, survives reload, and checks out without an account |
+| **Accounts** | Better Auth 1.7: sign-up, sign-in, reset, password change, session revocation, deletion |
+| **Orders** | libSQL; prices, names, shipping and stock recomputed server-side |
+| **Guest access** | An order is readable only with its own random token, never by UUID alone |
+| **Payments** | Stripe hosted Checkout, signed webhooks, refunds. Demo mode by default |
+| **Stock** | Reserved at checkout, committed on payment, released on expiry |
+| **Admin** | `/admin` ledger for allowlisted **and verified** emails |
+| **Assistant** | NVIDIA NIM tool calling over a fixed catalogue API, with a local fallback |
+| **Accessibility** | axe clean across 25 desktop and mobile views, keyboard paths tested |
 
-Deliberately absent: tax calculation, carrier rates, discount codes, product
-editing, partial refunds, dispute handling. Those are business decisions, not
-missing components — see [Limitations](#limitations).
+Deliberately absent: tax calculation, carrier rates, discount codes, product editing, partial refunds, dispute handling. Those are business decisions rather than missing components.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+  B["React SPA<br/>Vite · Router · Motion"] -->|"/api/*"| H["Hono app<br/>one function"]
+  H --> D[("libSQL<br/>Turso or local file")]
+  H --> S["Stripe<br/>Checkout + webhooks"]
+  H --> N["NVIDIA NIM<br/>fixed tool set"]
 ```
-src/                 React 19 + React Router 7 + Motion, Vite 7
-  data/products.ts   the catalogue; the single source of product truth
-  lib/pricing.ts     shared client/server totals so they cannot drift
-  styles/global.css  all design tokens and component styles
-  pages/             home, shop, product, checkout, confirmation, account, admin, legal
-server/
-  app.ts             Hono app: middleware, routes, static serving
-  auth.ts            Better Auth + libSQL/Kysely adapter
-  config.ts          fail-fast environment validation
-  orders.ts          order creation, listing, admin routes, rate limits
-  stock.ts           reserve / commit / release
-  order-status.ts    idempotent paid → packed → shipped → refunded transitions
-  payments.ts        Stripe REST calls and webhook signature verification
-  payment-routes.ts  webhook endpoint and payment return
-  assistant.ts       NIM tool loop, model output treated as untrusted
-  db.ts              libSQL client, versioned schema, stock seed
-api/index.ts         the single Vercel Function that delegates /api/*
+
+Two entry points share one app. Locally, `server/index.ts` runs Hono on `:8787` and serves `dist/`. On Vercel, `api/index.ts` delegates to the pre-bundled `dist-server/api-function.js`, because Vercel will not bundle local TypeScript imports from `api/`.
+
+Data is **libSQL** either way: a file at `data/ler.sqlite` in development, [Turso](https://turso.tech) in production. One code path, no dialect split. Schema versions live in an `app_schema` table because Turso rejects `PRAGMA user_version`.
+
+```
+src/                 React 19 · React Router 7 · Motion · Vite 7
+  data/products.ts   the catalogue, single source of product truth
+  lib/pricing.ts     shared totals, so client and server cannot drift
+  styles/global.css  every design token and component style
+server/              Hono app, Better Auth, orders, stock, payments, assistant
 tests/               node:test integration suites
 cook/                design brief, round log, OWASP notes, a11y reports
 ```
 
-Two entry points share one app:
+## Payments
 
-- **Local** — `server/index.ts` runs Hono on `:8787` and serves `dist/`.
-- **Vercel** — `api/index.ts` imports the pre-bundled `dist-server/api-function.js`.
-  Vercel does not bundle local TypeScript imports from `api/`, so `npm run build`
-  compiles the server first.
+Demo mode is the default and says so: the confirmation states that no payment was taken. To switch to Stripe, set `PAYMENTS_MODE=stripe` with `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and a public `BETTER_AUTH_URL`, then register the webhook for `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired` and `charge.refunded`.
 
-Data is **libSQL** in both cases: a local file at `data/ler.sqlite` in
-development, [Turso](https://turso.tech) when `TURSO_DATABASE_URL` is set. One
-code path, no dialect split. Schema versioning uses an `app_schema` table
-because Turso rejects `PRAGMA user_version`.
+The flow: checkout creates an `awaiting_payment` order, reserves stock and redirects to Stripe-hosted Checkout. Card details never touch this app. The return route verifies the session with Stripe, and a signed webhook marks the order paid, commits stock and sends a receipt. Events are verified with a five-minute tolerance and recorded by event id, so redelivery cannot sell stock twice. A payment that lands after the hold expires is refunded automatically.
 
-## Taking real money
-
-Demo mode is the default and is honest about it: the confirmation says no payment
-was taken and no order will ship.
-
-To switch to Stripe:
-
-1. Set `PAYMENTS_MODE=stripe`, `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
-2. Register `https://your-shop.example/api/payments/stripe/webhook` for:
-   `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
-   `checkout.session.async_payment_failed`, `checkout.session.expired`,
-   `charge.refunded`.
-3. Set `BETTER_AUTH_URL` to the public https origin and add `RESEND_API_KEY` for
-   receipts.
-4. Test in Stripe test mode with `4242 4242 4242 4242` before going live.
-
-The flow: checkout creates an `awaiting_payment` order, reserves stock and
-redirects to Stripe-hosted Checkout. Card details never touch this app. The
-return route verifies the session with Stripe; a signed webhook marks the order
-paid, commits stock and sends a receipt. Webhook events are verified with a
-5-minute tolerance and recorded by event id, so a redelivery cannot sell stock
-twice. A payment that lands after the hold expires is refunded automatically.
-
-Production refuses to start in demo mode unless `ALLOW_DEMO_PAYMENTS=true`, and
-refuses `PAYMENTS_MODE=stripe` without keys.
+Production refuses to boot in demo mode unless `ALLOW_DEMO_PAYMENTS=true`, and refuses `PAYMENTS_MODE=stripe` without keys.
 
 ## Accounts and access
 
-- Guests browse, add to the bag, check out and receive a receipt without signing
-  in. A guest order carries `user_id = NULL` and is read with a random access
-  token from the receipt link.
-- A guest order is **not** retroactively attached to an account created later;
-  that needs an explicit claim step.
-- Admin is an allowlist, not a role table: `ADMIN_EMAILS` plus
-  `REQUIRE_EMAIL_VERIFICATION=true`. The server refuses to boot if admin access
-  would rest on an unverified email.
-- Password change revokes other sessions. Account deletion removes the account,
-  its orders and its newsletter subscription.
+- Guests browse, add to the bag, check out and receive a receipt without signing in.
+- A guest order is **not** attached to an account created later; that needs an explicit claim step.
+- Admin is an allowlist, not a role table: `ADMIN_EMAILS` plus `REQUIRE_EMAIL_VERIFICATION=true`. The server will not start if admin access would rest on an unverified address.
+- Password change revokes other sessions. Deletion removes the account, its orders and its subscription.
 
-There are **no demo accounts in this repository**. To create an admin, sign up
-normally, set `ADMIN_EMAILS` to that address, mark the row verified (or complete
-verification with a real mail provider) and restart.
+There are **no demo accounts in this repository**. Sign up, add that address to `ADMIN_EMAILS`, verify it, and restart.
 
 ## The assistant
 
-A floating **Ask LER** chat is on every page, plus product-level entry points:
-*"Ask the studio about this piece"* and *"Style it for me"*, which searches the
-catalogue and proposes a set with one-click add.
+A floating **Ask LER** panel is on every page, plus two entry points on a product: *"Ask the studio about this piece"* and *"Style it for me"*, which searches the catalogue and proposes a set with one-click add.
 
-```env
-NVIDIA_API_KEY=nvapi-...
-NVIDIA_MODEL=meta/muse-glimmer-30b
-NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-ASSISTANT_RATE_MAX=20
-ASSISTANT_MAX_TOOL_ROUNDS=2
-```
+The key is server-side only and never appears in `/api/meta`, a response or a log. Tools are a fixed allowlist: `search_catalog`, `get_product`, `stock_status`, `suggest_add_to_cart`. Arguments are validated and results come only from the local catalogue. There is no browsing tool and no user-controlled URL to fetch, so there is no SSRF sink. Model output is treated as untrusted data; cards and buttons are built from validated slugs, so the assistant cannot invent a price or a link.
 
-- The key is server-side only and never appears in `/api/meta`, responses or logs.
-- Tools are a fixed allowlist — `search_catalog`, `get_product`, `stock_status`,
-  `suggest_add_to_cart`. Arguments are validated and results come only from the
-  local catalogue. There is no browsing tool and no user-controlled URL to fetch,
-  so there is no SSRF sink.
-- Tool output and user messages are untrusted data, not instructions. Cards and
-  add-to-bag buttons are built from validated slugs; the model cannot invent a
-  price or a link.
-- Upstream calls have a timeout, redirects disabled, a response size cap and a
-  bounded tool loop. Messages are capped by turn and length.
-- On error or timeout the reply falls back to local guidance with a visible note.
-- Muse Glimmer is a reasoning model: expect roughly 10–30s per tool round. Set
-  `NVIDIA_MODEL` to a faster NIM model for snappier replies; the loop and UI are
-  model-agnostic.
+On error or timeout the reply falls back to local guidance with a visible notice. Muse Glimmer is a reasoning model, so expect 10–30s per tool round; set `NVIDIA_MODEL` to a faster NIM model if you want snappier replies.
 
 ## Design system
 
-Tokens live at the top of `src/styles/global.css`:
+Tokens live at the top of `src/styles/global.css`.
 
-- **Colour** in OKLCH — paper, ink, olive, rust, honey — sampled from the
-  photography, with one accent (`--accent: var(--honey)`) and alpha borders.
-- **Radii** nested, not arbitrary: `--r-outer` for cards, `--r-inner` for what
-  sits inside (outer minus padding), `--r-control` for inputs and buttons.
-- **Type** self-hosted Instrument Serif for display, Satoshi for UI. Prices use
-  tabular numerals; headlines balance their wrapping.
-- **Motion** from `scale: 0.97` with a spring token, press at `0.97`, a shake on
-  a bad password, and a full `prefers-reduced-motion` path.
-- **Photography** on paper uses `mix-blend-mode: multiply` so the surface shows
-  through, disabled under forced colours and dark mode.
+- **Colour** in OKLCH, sampled from the photography: paper, ink, olive, rust, honey. One accent, alpha borders, no pure black or white.
+- **Radii** nested rather than arbitrary: `--r-outer` for cards, `--r-inner` for what sits inside (outer minus padding), `--r-control` for inputs.
+- **Type** self-hosted Instrument Serif for display, Satoshi for UI. Tabular numerals for prices, balanced headline wrapping.
+- **Motion** from `scale: 0.97` on the spring token, press at `0.97`, a shake on a bad password, and a full `prefers-reduced-motion` path.
+- **Photography** on paper uses `mix-blend-mode: multiply`, disabled under forced colours and dark mode.
 
-## Tests
+## Verification
 
-```bash
-npm test        # 21 integration tests
-npm run build   # typecheck client + bundle server
-```
+`npm test` runs 21 integration tests against throwaway databases: sessions and revocation, guest order tokens and UUID-only access being refused, server-side repricing, stock reserve and oversell refusal, webhook tampering and replay, refund transitions, per-IP limits, CSRF backstops, and an assistant tool loop that asserts the key never leaks.
 
-The suites (`tests/*.test.mjs`) run against throwaway databases and cover:
+`npm run build` typechecks the client and bundles the server. CI runs both on Node 22 and 24.
 
-- sign-up, sign-in, session reads, password change and revocation
-- guest order creation, token-gated reads, and UUID-only access being refused
-- server-side repricing and rejection of over-long or invalid input
-- stock reserve → commit → release, and oversell refusal
-- webhook signature verification, tampering, replay, refund transitions
-- per-IP rate limits and CSRF backstops
-- assistant fallback, rate limiting, and a fake-NIM tool loop that asserts the
-  key never leaks into a response
+Browser checks were run with Playwright during development: axe-core reports for 25 views, a mobile audit at 360, 390 and 430, and end-to-end purchase, auth and keyboard flows. The results and the round-by-round reasoning are in [`cook/`](cook/).
 
-Browser checks (axe, mobile audit, purchase flow) were run with Playwright during
-development and their results are recorded in `cook/`. They are not part of
-`npm test` because they need a running server and a browser.
+## Deploy
 
-## Deploying
-
-The app is deployed on **Vercel** with **Turso** for data:
+Deployed on **Vercel** with **Turso**:
 
 1. `vercel link`, then create a Turso database from the Vercel Marketplace.
-2. Set `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `TRUST_PROXY=true`,
-   `TRUSTED_ORIGINS` and — for real commerce — the Stripe and Resend keys.
+2. Set `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `TRUST_PROXY=true` and `TRUSTED_ORIGINS`, plus Stripe and Resend keys for real commerce.
 3. `npm run db:migrate` against the new database.
 4. `vercel --prod`.
 
-`vercel.json` builds the SPA into `dist/`, bundles the Hono app to
-`dist-server/api-function.js`, and rewrites `/api/*` to the single function.
-`TRUST_PROXY=true` makes rate limits use `x-forwarded-for`; only enable it behind
-a proxy you control.
+`vercel.json` builds the SPA into `dist/`, bundles the Hono app, and rewrites `/api/*` to the single function. Any Node host works too: `npm run build && npm start`.
 
-Any Node host works too: `npm run build && npm start` serves `dist/` plus `/api`
-from one process. The reasoning behind each of these choices is recorded in
-[`cook/ROUNDS.md`](cook/ROUNDS.md).
+<details>
+<summary><b>Configuration</b></summary>
 
-## Security
+<br>
 
-Coverage against the OWASP Top 10 and the reasoning behind each control is in
-[`cook/OWASP.md`](cook/OWASP.md). In short:
+Every variable is documented in [`.env.example`](.env.example). The ones that change behaviour:
 
-- Same-origin checks on writes, `HttpOnly`/`SameSite=Lax` cookies, `Secure` on
-  https, CSP, HSTS, COOP, `Permissions-Policy`, `nosniff`, a 32 KB body limit and
-  request IDs.
-- Parameterised SQL everywhere; no string-built queries.
-- Database-backed per-IP limits on sign-in, sign-up, reset, orders and
-  newsletter; forwarded headers ignored unless explicitly trusted.
-- Secrets come from the environment, are validated at startup, and are never
-  included in client responses.
-- The assistant cannot reach the network on a user's behalf and cannot widen its
-  own tool set.
+| Variable | Default | Effect |
+|---|---|---|
+| `BETTER_AUTH_SECRET` | required | Session signing. At least 32 characters in production |
+| `BETTER_AUTH_URL` | `http://localhost:5173` | Public origin. Must be https in production |
+| `PAYMENTS_MODE` | `demo` | `demo` takes no money; `stripe` uses hosted Checkout |
+| `MAIL_MODE` | `auto` | `file` writes to `data/outbox`; `resend` sends real mail |
+| `REQUIRE_EMAIL_VERIFICATION` | `false` | Required before admin access can be granted |
+| `ADMIN_EMAILS` | empty | Comma-separated allowlist for `/admin` |
+| `TRUST_PROXY` | `false` | Use `X-Forwarded-For` for rate limits, only behind your own proxy |
+| `NVIDIA_API_KEY` | empty | Enables the model; unset uses local guidance |
+| `DATABASE_PATH` | `data/ler.sqlite` | Ignored when `TURSO_DATABASE_URL` is set |
 
-Found something? Please follow [`SECURITY.md`](SECURITY.md) and report it
-privately rather than in an issue.
+</details>
 
-## Limitations
+## Security and limits
 
-- No tax calculation, per-country shipping rates or invoicing. Totals use flat
-  demo shipping (free over $120) with tax shown as included.
-- No product, stock or discount editing UI; no replenishment.
-- Full refunds only. No partial refunds, chargeback handling or accounting export.
+Coverage against the OWASP Top 10 and the reasoning behind each control is in [`cook/OWASP.md`](cook/OWASP.md). Same-origin checks on writes, `HttpOnly`/`SameSite=Lax` cookies, CSP, HSTS, COOP, `Permissions-Policy`, `nosniff`, a 32 KB body limit and request IDs. Parameterised SQL throughout, database-backed per-IP limits, and secrets that are validated at startup and never sent to the client.
+
+Report a vulnerability privately through [`SECURITY.md`](SECURITY.md), not the issue tracker.
+
+Known limits:
+
+- No tax calculation, per-country shipping rates or invoicing. Flat demo shipping, tax shown as included.
+- No product, stock or discount editing UI.
+- Full refunds only. No partial refunds, chargebacks or accounting export.
 - No carrier integration, packing slips or fulfilment webhooks.
 - Email change is not offered; name, password and deletion are self-service.
 - One admin tier, defined by a verified email allowlist.
-- Photography is third-party demo content — see [`LICENSE`](LICENSE).
 
 ## Licence
 
-Code is [MIT](LICENSE). Product photography, reference screenshots and the two
-font families keep their own terms; the licence file and
-[`public/fonts/LICENSE.md`](public/fonts/LICENSE.md) spell out what you must
-replace before using this commercially.
+Code is [MIT](LICENSE). Product photography, reference screenshots and both font families keep their own terms; [`LICENSE`](LICENSE) and [`public/fonts/LICENSE.md`](public/fonts/LICENSE.md) spell out what to replace before using this commercially.
+
+<div align="center">
+<br>
+<sub>Built as a design and engineering exercise. The studio, the pieces and the copy are fictional.</sub>
+</div>
